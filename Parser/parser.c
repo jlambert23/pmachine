@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "lexicalAnalyzer.c"
+//#include "../LexicalAnalyzer/lexicalAnalyzer.c"
 
 #define MAX_SYMBOL_LENGTH 13
 #define MAX_CODE_LENGTH 32768
@@ -14,7 +14,7 @@ lparentsym = 15, rparentsym = 16, commasym = 17, semicolonsym = 18,
 periodsym = 19, becomesym = 20, beginsym = 21, endsym = 22, ifsym = 23,
 thensym = 24, whilesym = 25, dosym = 26, callsym = 27, constsym = 28,
 varsym = 29, writesym = 31, readsym = 32;
-*/
+/**/
 
 char *codePtr, code[MAX_CODE_LENGTH];
 
@@ -36,22 +36,32 @@ void openFile(char *inputFile) {
     fclose(ifp);
 }
 
+int isIdentifier(int x) {
+    return 1;
+}
+
+int isNum(int x) {
+    return 1;
+}
+
 void error(int err) {
     switch (err)
         case 9:
-            printf("Error 9: Period expected.");
-        default:
-            break;
+            printf("Error 9: Period expected.\n");
         
 }
 
 void getToken(int start) { codePtr = (start == 1 ? strtok(code, " ") : strtok(NULL, " ")); }
 
+void statement() {
+    return;
+}
+
 int var_decl() {
     int declaring = 1;
 
     while (declaring) {
-        getToken();
+        getToken(0);
 
     }
 }
@@ -60,21 +70,21 @@ int const_decl() {
     int declaring = 1;
 
     while (declaring) {
-        getToken();
+        getToken(0);
         if (!isIdentifier(token)) error(-1);    // missing identifier
 
-        getToken();
+        getToken(0);
         if (token != eqlsym) error(-1);         // = should be followed by a number
 
-        getToken();
-        if (!isDigit(token)) error(-1);         // should be a number
+        getToken(0);
+        if (!isNum(token)) error(-1);         // should be a number
 
-        getToken();
+        getToken(0);
         if (token != commasym) declaring = 0;   // End declarations.
     }
 
     if (token != semicolonsym) error(-1);
-    getToken();
+    getToken(0);
 }
 
 int block() {
@@ -87,11 +97,10 @@ int block() {
             var_decl();
         // case procedure
         //    proc_decl();
-        default:
-            break;
     }
 
     statement();
+    return 1;
 }
 
 int program() {
@@ -103,9 +112,9 @@ int program() {
     if (token != periodsym) {
         error(9);
         return -1;
-    )
+    }
 
-    return 0;
+    return 1;
 }
 
 
