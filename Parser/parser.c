@@ -20,6 +20,11 @@ char *codePtr, code[MAX_CODE_LENGTH];
 
 int token;
 
+int isRelation(int ch) {
+    return (ch == eqlsym || ch == neqsym || ch == lessym ||
+            ch == leqsym || ch == gtrsym || ch == geqsym);
+}
+
 void openFile(char *inputFile) {
     FILE * ifp;
     char ch;
@@ -36,14 +41,6 @@ void openFile(char *inputFile) {
     fclose(ifp);
 }
 
-int isIdentifier(int x) {
-    return 1;
-}
-
-int isNum(int x) {
-    return 1;
-}
-
 void error(int err) {
     switch (err)
         case 9:
@@ -51,52 +48,162 @@ void error(int err) {
         
 }
 
-void getToken(int start) { codePtr = (start == 1 ? strtok(code, " ") : strtok(NULL, " ")); }
-
-void statement() {
-    return;
+void getToken(int start) {
+     codePtr = (start == 1 ? strtok(code, " ") : strtok(NULL, " "));
+     //printf("%s\n", codePtr);
+     if (isDigit(*codePtr))
+        token = atoi(codePtr);
 }
 
-int var_decl() {
-    int declaring = 1;
+void factor() {
+    if (token == identsym) getToken(0);
 
-    while (declaring) {
-        getToken(0);
+    // TODO: better # finder
+    else if (isDigit(token)) getToken(0);
 
-    }
-}
-
-int const_decl() {
-    int declaring = 1;
-
-    while (declaring) {
-        getToken(0);
-        if (!isIdentifier(token)) error(-1);    // missing identifier
-
-        getToken(0);
-        if (token != eqlsym) error(-1);         // = should be followed by a number
-
-        getToken(0);
-        if (!isNum(token)) error(-1);         // should be a number
-
-        getToken(0);
-        if (token != commasym) declaring = 0;   // End declarations.
-    }
-
-    if (token != semicolonsym) error(-1);
+    else if (token != rparentsym) error(-1);
     getToken(0);
 }
 
+void term() {
+    factor();
+    while (token == multsym || token == slashsym) {
+        getToken(0);
+        factor();
+    }
+}
+
+void expression() {
+    if (token == plussym || token == minussym) getToken(0);
+    term();
+    while (token == plussym || token == minussym) {
+        getToken(0);
+        term();
+    }
+}
+
+void condition() {
+    if (token == oddsym) {
+        getToken(0);
+        expression();
+    }
+    else {
+        expression();
+        if (!isRelation(token)) error(-1);
+        getToken(0);
+        expression();
+    }
+}
+
+void statement() {
+    // Identifier.
+    if (token == identsym) {
+        getToken(0);
+        if (token != becomesym) error(-1);
+
+        getToken(0);
+        expression();
+    }
+
+    // Procedure call.
+    else if (token == callsym) {
+        getToken(0);
+        if (token != identsym) error (-1);
+        getToken(0);
+    } 
+
+    // Begin.
+    else if (token == beginsym) {
+        getToken(0);
+        statement();
+
+        while (token == semicolonsym) {
+            getToken(0);
+            statement();
+        }
+
+        if (token != endsym) error(-1);
+        getToken(0);
+    }
+
+    // If.
+    else if (token == ifsym) {
+        getToken(0);
+        condition();
+
+        if (token != thensym) error(-1);         // Need then
+
+        getToken(0);
+        statement();
+    }
+
+    // While.
+    else if (token != whilesym) {
+        getToken(0);
+        condition();
+
+        if (token != dosym) error(-1);
+
+        getToken(0);
+        statement();
+    }
+}
+
 int block() {
-    switch(token) {
-        // constant
-        case 28:
-            const_decl();
-        // variable
-        case 29:
-            var_decl();
-        // case procedure
-        //    proc_decl();
+    int declaring;
+    
+    // Constant declaration.
+    if (token == constsym) {
+        declaring = 1;
+            
+        while (declaring) {
+            getToken(0);
+            if (token != identsym) error(-1);       // missing identifier
+
+            getToken(0);
+            if (token != eqlsym) error(-1);         // = should be followed by a number
+
+            // TODO: use better # check
+            getToken(0);
+            if (!isDigit(token)) error(-1);         // should be a number 
+
+            getToken(0);
+            if (token != commasym) declaring = 0;   // , continues loop
+        }
+
+        if (token != semicolonsym) error(-1);       // missing ;
+        getToken(0);
+    }
+
+    // Variable declaration.
+    if (token == varsym) {
+        declaring = 1;
+
+        while (declaring) {
+            getToken(0);
+            if (token != identsym) error(-1);       // missing identifier
+
+            getToken(0);
+            if (token != commasym) declaring = 0;   // , continues loop
+        }
+
+        if (token != semicolonsym) error(-1);       // missing ;
+        getToken(0);
+    }
+
+    // Call procedure.
+    while (token = callsym) {
+        getToken(0);
+        if (token != identsym) error(-1);       // missing identifier
+
+        getToken(0);
+        if (token != semicolonsym)              // missing ;
+
+        getToken(0);
+        block();                                // call procedure
+
+        if (token != semicolonsym) error(-1);   // missing ;
+        getToken(0);
     }
 
     statement();
@@ -105,7 +212,7 @@ int block() {
 
 int program() {
     getToken(1);
-
+    
     if (!block())
         return -1;
 
@@ -113,7 +220,7 @@ int program() {
         error(9);
         return -1;
     }
-
+    
     return 1;
 }
 
