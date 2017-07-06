@@ -16,6 +16,8 @@ thensym = 24, whilesym = 25, dosym = 26, callsym = 27, constsym = 28,
 varsym = 29, writesym = 31, readsym = 32;
 /**/
 
+void expression();
+
 char *codePtr, code[MAX_CODE_LENGTH];
 
 int token;
@@ -42,27 +44,48 @@ void openFile(char *inputFile) {
 }
 
 void error(int err) {
-    switch (err)
+    switch (err) {
         case 9:
             printf("Error 9: Period expected.\n");
+            break;
+        default:
+            printf("miscellaneous error.\n");
+    }
         
 }
 
 void getToken(int start) {
-     codePtr = (start == 1 ? strtok(code, " ") : strtok(NULL, " "));
-     //printf("%s\n", codePtr);
-     if (isDigit(*codePtr))
-        token = atoi(codePtr);
+    codePtr = (start == 1 ? strtok(code, " ") : strtok(NULL, " "));
+    
+    if (!isDigit(*codePtr))
+        getToken(0);
+
+    token = atoi(codePtr);
+}
+
+void enter() {
+    return;
 }
 
 void factor() {
     if (token == identsym) getToken(0);
 
-    // TODO: better # finder
-    else if (isDigit(token)) getToken(0);
+    else if (token == numbersym) {
+        getToken(0);
+        //getToken(0); // var contents
+        printf("%d\n", token);
+    }
 
-    else if (token != rparentsym) error(-1);
-    getToken(0);
+    else if (token == lparentsym) {
+        getToken(0);
+        expression();
+
+        if (token != rparentsym) error(-1);        // left ( has not been closed
+        getToken(0);
+    }
+
+    else error(-1);                                     // identifier ( or number expected
+    
 }
 
 void term() {
@@ -89,7 +112,7 @@ void condition() {
     }
     else {
         expression();
-        if (!isRelation(token)) error(-1);
+        if (!isRelation(token)) error(-1);          // relation operator missing in conditional statement
         getToken(0);
         expression();
     }
@@ -99,7 +122,7 @@ void statement() {
     // Identifier.
     if (token == identsym) {
         getToken(0);
-        if (token != becomesym) error(-1);
+        if (token != becomesym) error(-1);          // := missing in statement
 
         getToken(0);
         expression();
@@ -108,7 +131,7 @@ void statement() {
     // Procedure call.
     else if (token == callsym) {
         getToken(0);
-        if (token != identsym) error (-1);
+        if (token != identsym) error (-1);          // missing identifier
         getToken(0);
     } 
 
@@ -122,7 +145,7 @@ void statement() {
             statement();
         }
 
-        if (token != endsym) error(-1);
+        if (token != endsym) error(-1);             // begin must be closed with end
         getToken(0);
     }
 
@@ -131,7 +154,7 @@ void statement() {
         getToken(0);
         condition();
 
-        if (token != thensym) error(-1);         // Need then
+        if (token != thensym) error(-1);            // if condition must be followed by then
 
         getToken(0);
         statement();
@@ -142,36 +165,40 @@ void statement() {
         getToken(0);
         condition();
 
-        if (token != dosym) error(-1);
+        if (token != dosym) error(-1);              // while condition must be followed by do
 
         getToken(0);
         statement();
     }
 }
 
-int block() {
+int block(int level) {
     int declaring;
     
     // Constant declaration.
     if (token == constsym) {
         declaring = 1;
-            
+                
         while (declaring) {
             getToken(0);
             if (token != identsym) error(-1);       // missing identifier
 
             getToken(0);
-            if (token != eqlsym) error(-1);         // = should be followed by a number
-
-            // TODO: use better # check
-            getToken(0);
-            if (!isDigit(token)) error(-1);         // should be a number 
+            if (token != eqlsym) error(-1);         // identifier should be followed by =
 
             getToken(0);
-            if (token != commasym) declaring = 0;   // , continues loop
+            if (token != numbersym) error(-1);      // = should be followed by number 
+
+            enter(); // param: constant, ident, number
+            getToken(0); // var contents
+
+            getToken(0);
+
+            // commasym continues loop.
+            if (token != commasym) declaring = 0;
         }
 
-        if (token != semicolonsym) error(-1);       // missing ;
+        if (token != semicolonsym) error(-1);       // declaration must end with ;
         getToken(0);
     }
 
@@ -184,40 +211,48 @@ int block() {
             if (token != identsym) error(-1);       // missing identifier
 
             getToken(0);
-            if (token != commasym) declaring = 0;   // , continues loop
+
+            enter(); // param: variable, ident, level
+            
+            // commasym continues loop.
+            if (token != commasym) declaring = 0;
         }
 
-        if (token != semicolonsym) error(-1);       // missing ;
+        if (token != semicolonsym) error(-1);       // declaration must end with ;
         getToken(0);
     }
 
+    
     // Call procedure.
-    while (token = callsym) {
+    while (token == callsym) {
         getToken(0);
-        if (token != identsym) error(-1);       // missing identifier
+        if (token != identsym) error(-1);           // missing procedure declaration
+
+        enter(); // param: procedure, ident
 
         getToken(0);
-        if (token != semicolonsym)              // missing ;
+        if (token != semicolonsym) error(-1);       // procedure declaration must end with ;
 
         getToken(0);
-        block();                                // call procedure
+        block(level + 1);
 
-        if (token != semicolonsym) error(-1);   // missing ;
+        if (token != semicolonsym) error(-1);       // no ; at the end of block
         getToken(0);
     }
-
+    
     statement();
     return 1;
 }
 
 int program() {
     getToken(1);
-    
-    if (!block())
-        return -1;
+    int level = 0;
 
+    if (!block(level))
+        return -1;
+    
     if (token != periodsym) {
-        error(9);
+        error(9);                                   // No period at end of file.
         return -1;
     }
     
