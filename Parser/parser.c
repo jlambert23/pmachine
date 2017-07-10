@@ -14,13 +14,23 @@ lparentsym = 15, rparentsym = 16, commasym = 17, semicolonsym = 18,
 periodsym = 19, becomesym = 20, beginsym = 21, endsym = 22, ifsym = 23,
 thensym = 24, whilesym = 25, dosym = 26, callsym = 27, constsym = 28,
 varsym = 29, writesym = 31, readsym = 32;
-/**/
+/**/ 
 
+typedef struct {
+    int kind;           // const = 1, var = 2, proc = 3
+    char name[12];      // name up to 11 chars
+    int val;            // number (ASCII value)
+    int level;          // L level
+    int addr;           // M address
+} symbol;
+
+// Pre-defined functions.
 void expression();
 
+// Global variables.
+symbol symbol_table[TABLE_SIZE];
 char *codePtr, code[MAX_CODE_LENGTH];
-
-int token;
+int token, tablePtr;
 
 int isRelation(int ch) {
     return (ch == eqlsym || ch == neqsym || ch == lessym ||
@@ -43,6 +53,33 @@ void openFile(char *inputFile) {
     fclose(ifp);
 }
 
+/*
+For constants, you must store kind, name and value.
+For variables, you must store kind, name, L and M.
+For procedures, you must store kind, name, L and M.
+*/
+void enter(int kind, char *name, int value, int L, int M) {
+    symbol newsym;
+    newsym.kind = kind;
+    strcpy(newsym.name, name);
+
+    switch (kind) {
+        // Constant
+        case 1:
+            newsym.val = value;
+            break;
+        // Variable
+        case 2:
+        // Procedure
+        case 3:
+            newsym.level = L;
+            newsym.addr = M;
+            break;
+    }
+
+    symbol_table[tablePtr] = newsym;
+}
+
 void error(int err) {
     switch (err) {
         case 9:
@@ -63,29 +100,23 @@ void getToken(int start) {
     token = atoi(codePtr);
 }
 
-void enter() {
-    return;
-}
-
 void factor() {
     if (token == identsym) getToken(0);
 
     else if (token == numbersym) {
         getToken(0);
-        //getToken(0); // var contents
-        printf("%d\n", token);
+        getToken(0); // var contents
     }
 
     else if (token == lparentsym) {
         getToken(0);
         expression();
 
-        if (token != rparentsym) error(-1);        // left ( has not been closed
+        if (token != rparentsym) error(-1);             // left ( has not been closed
         getToken(0);
     }
 
     else error(-1);                                     // identifier ( or number expected
-    
 }
 
 void term() {
@@ -119,7 +150,7 @@ void condition() {
 }
 
 void statement() {
-    // Identifier.
+    // Identifier
     if (token == identsym) {
         getToken(0);
         if (token != becomesym) error(-1);          // := missing in statement
@@ -128,14 +159,14 @@ void statement() {
         expression();
     }
 
-    // Procedure call.
+    // Procedure call
     else if (token == callsym) {
         getToken(0);
         if (token != identsym) error (-1);          // missing identifier
         getToken(0);
     } 
 
-    // Begin.
+    // Begin
     else if (token == beginsym) {
         getToken(0);
         statement();
@@ -149,7 +180,7 @@ void statement() {
         getToken(0);
     }
 
-    // If.
+    // If
     else if (token == ifsym) {
         getToken(0);
         condition();
@@ -160,8 +191,8 @@ void statement() {
         statement();
     }
 
-    // While.
-    else if (token != whilesym) {
+    // While
+    else if (token == whilesym) {
         getToken(0);
         condition();
 
@@ -170,65 +201,90 @@ void statement() {
         getToken(0);
         statement();
     }
+
+    // =========TODO=========
+    // Read
+    else if (token == readsym) {
+        getToken(0);
+
+        // Read identifier.
+        if (token != identsym) error(-1);     // missing identifier.
+        getToken(0);
+        statement();
+    }
+
+    // =========TODO=========
+    // Write
+    else if (token == writesym) {
+        getToken(0);
+
+        // Write identifier.
+        if (token != identsym) error(-1);     // missing identifier.
+        getToken(0);
+        statement();        
+    }
 }
 
-int block(int level) {
-    int declaring;
-    
-    // Constant declaration.
-    if (token == constsym) {
-        declaring = 1;
+void constDecl() {
+    int declaring = 1;
                 
-        while (declaring) {
-            getToken(0);
-            if (token != identsym) error(-1);       // missing identifier
-
-            getToken(0);
-            if (token != eqlsym) error(-1);         // identifier should be followed by =
-
-            getToken(0);
-            if (token != numbersym) error(-1);      // = should be followed by number 
-
-            enter(); // param: constant, ident, number
-            getToken(0); // var contents
-
-            getToken(0);
-
-            // commasym continues loop.
-            if (token != commasym) declaring = 0;
-        }
-
-        if (token != semicolonsym) error(-1);       // declaration must end with ;
+    while (declaring) {
         getToken(0);
+        if (token != identsym) error(-1);       // missing identifier
+
+        getToken(0);
+        if (token != eqlsym) error(-1);         // identifier should be followed by =
+
+        getToken(0);
+        if (token != numbersym) error(-1);      // = should be followed by number 
+
+        enter(0, "0", 0, 0, 0); // param: constant, ident, number
+        getToken(0); // var contents
+
+        getToken(0);
+
+        // commasym continues loop.
+        if (token != commasym) declaring = 0;
     }
 
-    // Variable declaration.
-    if (token == varsym) {
-        declaring = 1;
+    if (token != semicolonsym) error(-1);       // declaration must end with ;
+    getToken(0);
+}
 
-        while (declaring) {
-            getToken(0);
-            if (token != identsym) error(-1);       // missing identifier
+void varDecl() {
+    int declaring = 1;
 
-            getToken(0);
+    while (declaring) {
+        getToken(0);
+        if (token != identsym) error(-1);       // missing identifier
 
-            enter(); // param: variable, ident, level
+        getToken(0);
+
+        enter(0, "0", 0, 0, 0); // param: variable, ident, level
             
-            // commasym continues loop.
-            if (token != commasym) declaring = 0;
-        }
-
-        if (token != semicolonsym) error(-1);       // declaration must end with ;
-        getToken(0);
+        // commasym continues loop.
+        if (token != commasym) declaring = 0;
     }
 
+    if (token != semicolonsym) error(-1);       // declaration must end with ;
+    getToken(0);
+}
+
+int block(int level) {    
+    // Constant declaration
+    if (token == constsym)
+        constDecl();
+
+    // Variable declaration
+    if (token == varsym)
+        varDecl();
     
-    // Call procedure.
+    // Call main procedure
     while (token == callsym) {
         getToken(0);
         if (token != identsym) error(-1);           // missing procedure declaration
 
-        enter(); // param: procedure, ident
+        enter(0, "0", 0, 0, 0); // param: procedure, ident
 
         getToken(0);
         if (token != semicolonsym) error(-1);       // procedure declaration must end with ;
