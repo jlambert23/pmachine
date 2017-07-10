@@ -1,15 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "LexicalAnalyzer/lexicalAnalyzer.c"    
-#include "Parser/parser.c"
-//#include "pm0vm.c"
-
-#define LEX_IN      "Parser/Sample Input/count.txt"
-#define LEX_OUT     "Parser/in.txt"
-
-#define PAR_OUT     "Parser/out.txt"
-
+#include "compiler.h"
 
 typedef enum { false, true } bool;
 
@@ -37,7 +26,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    lexicalAnalyzer(LEX_IN, LEX_OUT);
+    char lexin[64];
+    strcpy(lexin, argc > 1 ? argv[1] : LEX_IN);
+
+    lexicalAnalyzer(lexin, LEX_OUT);
 
     //createParserInput();
     parser(LEX_OUT, PAR_OUT);
