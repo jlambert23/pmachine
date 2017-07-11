@@ -1,13 +1,14 @@
 #include "compiler.h"
-
-typedef enum { false, true } bool;
+#include "LexicalAnalyzer/lexicalAnalyzer.c"
+#include "Parser/parser.c"
+#include "Parser/codeGen.c"
 
 typedef struct { bool l, a, v; } flag;
 
 int main(int argc, char **argv) {
     flag dir;
     
-    // Check and execute compiler directives.
+    // Check and flag compiler directives.
     int ptr;
     for (ptr = 1; ptr < argc && argv[ptr][0] == '-'; ptr++) {
         switch(argv[ptr][1]) {
@@ -28,10 +29,8 @@ int main(int argc, char **argv) {
 
     char lexin[64];
     strcpy(lexin, argc > 1 ? argv[1] : LEX_IN);
-
+    
     lexicalAnalyzer(lexin, LEX_OUT);
-
-    //createParserInput();
     parser(LEX_OUT, PAR_OUT);
 
     return 0;

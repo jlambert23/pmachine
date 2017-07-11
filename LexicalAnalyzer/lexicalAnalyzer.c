@@ -2,12 +2,6 @@
 	Lexical Analyzer
 */
 
-//#include <stdio.h>
-//#include <stdlib.h>
-#include <string.h>
-
-//~~~Internal Representation Stuff~~~
-
 //Internal representation mapping, from integer to string.
 char IRMapping[34][64] = {
 "ZERO",

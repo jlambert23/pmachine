@@ -1,8 +1,9 @@
+#ifndef COMPILER_H
+#define COMPILER_H
+
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "LexicalAnalyzer/lexicalAnalyzer.c"    
-#include "Parser/parser.c"
+#include <string.h>
 
 // I/O management.
 #define LEX_IN      "Parser/Sample Input/count.txt"
@@ -14,6 +15,9 @@
 #define MAX_IDENTIFIER_LENGTH 12
 #define MAX_CODE_LENGTH 32768
 #define TABLE_SIZE 32
+
+// Pre-defined functions
+void emit();
 
 typedef enum { false, true } bool;
 
@@ -61,3 +65,5 @@ enum sym {
 	writesym,
  	readsym
 };
+
+#endif
