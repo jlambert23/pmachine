@@ -1,0 +1,21 @@
+Line	OP	L	M
+  0	sto	0	0
+  1	lod	0	0
+  2	lod	0	0
+  3	jpc	0	11
+  4	lod	0	0
+  5	lod	0	0
+  6	opr	0	2
+  7	sto	0	0
+  8	lod	0	0
+  9	sio	0	1
+ 10	jmp	0	1
+ 11	sio	0	3
+
+					pc	bp	sp	stack
+Initial values 				0	1	0
+  0	sto	0	0		1	1	-1	
+  1	lod	0	0		2	1	0	
+  2	lod	0	0		3	1	1	0 
+  3	jpc	0	11		11	1	0	
+ 11	sio	0	3		0	0	0	

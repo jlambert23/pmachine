@@ -12,22 +12,9 @@
  * "vmoutput.txt".*
  */
 
-
-
-#include "stdio.h"
-#include "stdlib.h"
-
 #define MAX_STACK_HEIGHT 2000
-#define MAX_CODE_LENGTH 500
-#define FILE_NAME "vminput.txt"
 
 const char *opcode[] = {"lit", "opr", "lod", "sto", "cal", "inc", "jmp", "jpc", "sio"};
-
-typedef struct Instruction {
-    int op; // opcode
-    int l; // lexicographical level
-    int m; // miscellaneous
-} instruction;
 
 typedef struct Registers {
     instruction *ir;
@@ -54,7 +41,7 @@ int base(int *stack, int l, int base, int mode) {
 void print_instructions(FILE **ofp, instruction **code, int n) {
     int i;
 
-    *ofp = fopen("vmoutput.txt", "w");
+    *ofp = fopen(VM_OUT, "w");
 
     fprintf(*ofp, "Line\tOP\tL\tM\n");
 
@@ -89,17 +76,13 @@ void print_execution(FILE *ofp, int *stack, registers *reg, int call) {
 
 // Open file at argc[1] or FILE_NAME when no argument is given.
 // Return 0 when file is unable to be read, otherwise return 1.
-int open_file(FILE **ofp, int argv, char**argc, instruction ***code) {
+void open_file(FILE **ofp, char *filename, instruction ***code) {
     FILE *ifp;
-    char *filename = argv > 1 ? argc[1] : FILE_NAME;
     char buffer[32];
     int i;
 
     // Terminate program if file is unable to be read.
-    if (!(ifp = fopen(filename, "r"))) {
-        printf("Unable to read file. Proper syntax: \"\" or <filename>.\n");
-        return 0;
-    }
+    if (!(ifp = fopen(filename, "r"))) error(27);
 
     // Dynamically allocate memory for instructions
     *code = malloc(MAX_CODE_LENGTH * sizeof(instruction));
@@ -121,7 +104,6 @@ int open_file(FILE **ofp, int argv, char**argc, instruction ***code) {
     print_instructions(ofp, *code, i);
 
     fclose(ifp);
-    return 1;
 }
 
 // Operations called when op = 2 (mostly logic/arithmetic).
@@ -289,18 +271,26 @@ int execution_cycle(FILE *ofp, int *stack, registers *reg, int *call) {
         return run;
 }
 
+void cleanup(instruction **code, registers *reg, int *stack, FILE *ofp) {
+    int i;
+    for (i = 0; i < MAX_CODE_LENGTH; i++)
+        free(code[i]);
+    free(code);
+    free(reg);
+    free(stack);    
+    fclose(ofp);
+}
+
 // Operates virtual machine to simulate PM/0.
 // Return 0 if program terminated successfully, else return -1.
-int main(int argv, char **argc) {
+int virtualMachine(char *inputFile) {
     FILE *ofp;
     instruction **code;
     int *stack;
     int call = 0;
     int run = 1;    
 
-    // Return -1 if file fails to open.
-    if (!open_file(&ofp, argv, argc, &code))
-        return -1;
+    open_file(&ofp, inputFile, &code);
     
     // Instantiate registers.
     registers *reg = malloc(sizeof(registers));
@@ -327,20 +317,10 @@ int main(int argv, char **argc) {
         run = execution_cycle(ofp, stack, reg, &call);
     }
     
-    // Program failed to terminate appropriately; notify user.
-    if (run == -1) {
-        printf("ERROR: Failed to execute program. . .\n");
-        fprintf(ofp, "ERROR: Failed to execute program. . .\n");
-    }
+    cleanup(code, reg, stack, ofp);
 
-    // Cleanup.
-    int i;
-    for (i = 0; i < MAX_CODE_LENGTH; i++)
-        free(code[i]);
-    free(code);
-    free(reg);
-    free(stack);    
-    fclose(ofp);
+    // Program failed to terminate appropriately; notify user.
+    if (run == -1) error (13);
 
     return run;
 }

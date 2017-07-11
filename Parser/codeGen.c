@@ -1,3 +1,2 @@
-void emit() {
-    return;
+void openFileCodeGen(char *fileName) {
 }

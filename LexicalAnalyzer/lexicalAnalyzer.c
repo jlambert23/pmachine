@@ -1,9 +1,10 @@
 /*
 	Lexical Analyzer
 */
+#define MAX_NUMBER_LENGTH 5
 
 //Internal representation mapping, from integer to string.
-char IRMapping[34][64] = {
+char IRMapping[35][64] = {
 "ZERO",
 "nulsym",
 "identsym",
@@ -38,12 +39,12 @@ char IRMapping[34][64] = {
 "writesym",
 "readsym",
 "?",
-
+"procsym"
 };
 
 //List of symbols allowed
 char symbols[] = {'+', '-', '*', '/', '(', ')', '=', ',', '.', '<', '>', ';', ':'};
-char reserved[14][32] = {
+char reserved[15][32] = {
 "const",
 "var",
 "?",
@@ -57,13 +58,14 @@ char reserved[14][32] = {
 "do",
 "read",
 "write",
-"odd"
+"odd",
+"procedure"
 };
 
 //Returns the index in reserved of the string pointed to by [identifier].
 int reservedIndex(char * identifier)
 {
-	for(int i = 0; i < 14; i++)
+	for(int i = 0; i < 15; i++)
 	{
 		if (strcmp(reserved[i], identifier) == 0)
 		{
@@ -79,7 +81,7 @@ int mapReserved(int spotInReserved)
 	if (spotInReserved == 0)
 		return constsym;
 	if (spotInReserved == 1)
-		return varsym;
+		return varsym;		
 	if (spotInReserved == 3)
 		return callsym;
 	if (spotInReserved == 4)
@@ -100,6 +102,9 @@ int mapReserved(int spotInReserved)
 		return writesym;
 	if (spotInReserved == 13)
 		return oddsym;
+	if (spotInReserved == 14)
+		return procsym;
+		
     return -1;
 }
 
@@ -197,15 +202,21 @@ int isValid(char theChar)
 	return isAlphanumeric(theChar) || isSymbol(theChar) || isInvisible(theChar) || theChar == '\0';
 }
 
+// Returns 1 iff [theChar] is a relational character, 0 otherwise.
+int isRelation(int theChar) {
+    return (theChar == eqlsym || theChar == neqsym || theChar == lessym || theChar == leqsym 
+			|| theChar == gtrsym || theChar == geqsym);
+}
+
 //~~~Error state stuff~~~
 
 //If called, this makes a text file called "ef" and places the error message into it.
 void throwError(char * message)
 {
-	FILE * errorFile = fopen("ef", "w");
+	//FILE * errorFile = fopen("ef", "w");
 	printf("An error occurred while running lexical analysis: %s\n", message);
-	fprintf(errorFile, "An error occurred while running lexical analysis: %s\n", message);
-	fclose(errorFile);
+	//fprintf(errorFile, "An error occurred while running lexical analysis: %s\n", message);
+	//fclose(errorFile);
 	exit(0);
 }
 
@@ -271,7 +282,9 @@ void addToBuffer(char theChar)
 //This method opens the input and output files, and also reads in all the data from the input file.
 void openFiles(char * inputFile, char * outputFile)
 {
-	FILE * inFile = fopen(inputFile, "r");
+	FILE * inFile;
+	if (!(inFile = fopen(inputFile, "r"))) throwError("Unable to read lexical input file.\n");
+
 	outFile = fopen(outputFile, "w");
 
 	fseek(inFile, 0, SEEK_END);
@@ -542,29 +555,9 @@ void echoInput()
 	fprintf(outFile, "Source Program:\n%s\n\n", inputChars);
 }
 
-/**/
-int lexicalAnalyzer(char *input, char *output)
+void lexicalAnalyzer(char *input, char *output)
 {
 	openFiles(input, output);
 	processText();
 	fclose(outFile);
-	return 0;
 }
-/**/
-/*
-int main(int argc, char ** argv)
-{
-	if (argc != 3)
-	{
-		printf("Invalid arguments for lexical analyzer!\nUSAGE: ./lexicalAnalyzer [input file] [output file]\n");
-		return 1;
-	}
-	openFiles(argv[1], argv[2]);
-	
-	//Uncomment this to print out the input program as well...
-	//echoInput();
-	
-	processText();
-	return 0;
-}
-/**/
