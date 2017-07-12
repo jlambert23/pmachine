@@ -1,7 +1,7 @@
 #include "parser.h"
 
 // Global variables.
-int token, tablePtr = 0, cx = 0;
+int token, addr = 0, tablePtr = 0, cx = 0;
 char *codePtr, lexeme[MAX_CODE_LENGTH], idName[MAX_IDENTIFIER_LENGTH];
 
 symbol symbol_table[TABLE_SIZE];
@@ -33,10 +33,11 @@ void printTable() {
                 printf("const\t%s\t%d\n", symbol_table[i].name, symbol_table[i].val);
                 break;
             case 2:
-                printf("var\t%s\t\n", symbol_table[i].name);
+                printf("var\t%s\t\t%d\n", symbol_table[i].name, symbol_table[i].addr);
                 break;
             case 3:
                 printf("proc\t%s\t%d\n", symbol_table[i].name, symbol_table[i].level);
+                break;
         }
     }
 }
@@ -107,20 +108,19 @@ void enter(int kind, char *name, int value, int L, int M) {
 
     // Constant initialization
     if (kind == 1) newsym.val = value;
+    else addr++;
 
     symbol_table[tablePtr] = newsym;
     tablePtr++;
 }
 
 /* Program starts here. Function is called by compiler.c */
-int parser(char *inputFile, char *outputFile)
+void parser(char *inputFile, char *outputFile)
 {
     openFile(inputFile);
     program();
-    //printTable();
+    printTable();
     printCode();
-
-    return 0;
 }
 
 /* ------------------------------------------------*/
@@ -147,7 +147,7 @@ void block(int level) {
     if (token == varsym)
         varDecl(level);
 
-    /* Lexical analyzer does not generate procsym. */
+    /* Lexical analyzer does not generate procsym. *//*
     // Procedure declaration
     while (token == procsym)
         procDecl(level);
@@ -171,7 +171,7 @@ void constDecl(int level) {
         getToken(0); // value
 
         // param: constant, ident, value
-        enter(const_type, idName, token, level, 0);
+        enter(const_type, idName, token, level, addr);
         
         getToken(0);
     } while (token == commasym);
@@ -189,7 +189,7 @@ void varDecl(int level) {
         getToken(0);
 
         // param: variable, ident, level
-        enter(var_type, idName, 0, level, 0);
+        enter(var_type, idName, 0, level, addr);
     } while (token == commasym);
 
     if (token != semicolonsym) error(5);
@@ -197,13 +197,13 @@ void varDecl(int level) {
     getToken(0);
 }
 
-// Procedure/call
+// Procedure declaration
 void procDecl(int level) {
     getToken(0);
     if (token != identsym) error(4);
 
     // param: procedure, ident
-    enter(proc_type, idName, 0, level, 0);
+    enter(proc_type, idName, 0, level, addr);
 
     getToken(0);
     if (token != semicolonsym) error(6);
@@ -321,7 +321,7 @@ void statement() {
         int i = find(idName);
         if (i < 0) error(11);                               // Undeclared identifier
         if (symbol_table[i].kind != var_type) error(12);    // Assigment to constant or procedure is not allowed.
-
+        printf("%s\n", symbol_table[i].name);
         emit(LOD, symbol_table[i].level, symbol_table[i].addr);
         emit(SIO, 0, 1);
     }
@@ -399,7 +399,8 @@ void factor() {
 
     else if (token == numbersym) {
         getToken(0);
-        getToken(0); // var contents
+        emit(LIT, 0, token);
+        getToken(0);
     }
 
     else if (token == lparentsym) {

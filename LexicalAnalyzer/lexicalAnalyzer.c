@@ -1,7 +1,6 @@
 /*
 	Lexical Analyzer
 */
-#define MAX_NUMBER_LENGTH 5
 
 //Internal representation mapping, from integer to string.
 char IRMapping[35][64] = {
@@ -38,8 +37,7 @@ char IRMapping[35][64] = {
 "?",
 "writesym",
 "readsym",
-"?",
-"procsym"
+"?"
 };
 
 //List of symbols allowed
@@ -58,14 +56,13 @@ char reserved[15][32] = {
 "do",
 "read",
 "write",
-"odd",
-"procedure"
+"odd"
 };
 
 //Returns the index in reserved of the string pointed to by [identifier].
 int reservedIndex(char * identifier)
 {
-	for(int i = 0; i < 15; i++)
+	for(int i = 0; i < 14; i++)
 	{
 		if (strcmp(reserved[i], identifier) == 0)
 		{
@@ -102,8 +99,6 @@ int mapReserved(int spotInReserved)
 		return writesym;
 	if (spotInReserved == 13)
 		return oddsym;
-	if (spotInReserved == 14)
-		return procsym;
 		
     return -1;
 }

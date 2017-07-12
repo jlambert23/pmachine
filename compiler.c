@@ -17,8 +17,10 @@ void printFile(char *file) {
 
 // Provide custom input file utilizing '-f' flag.
 char *inputFile(int argc, char **argv) {
+    int flag = 0;
     for (int i = 1; i < argc && argv[i][0] == '-'; i++)
-        if (argv[i][1] == 'f') return argv[i + 1];
+        if (argv[i][1] == 'f') 
+            return (argv[i + 1] ? argv[i + 1] : IN);
     return IN;
 }
 
@@ -29,17 +31,17 @@ void directives(int argc, char **argv) {
             switch(argv[i][1]) {
                 // Print list of lexemes/tokens to the screen.
                 case 'l':
-                    printf("%cLexeme List:\n", (i > 1 ? '\n' : '\0'));
+                    printf("\nLexeme List:\n");
                     printFile(LEX_OUT);
                     break;
                 // Print generated assembly code to the screen.
                 case 'a':
-                    printf("%cAssembly code:\n", (i > 1 ? '\n' : '\0'));
+                    printf("\nAssembly code:\n");
                     printFile(PAR_OUT);
                     break;
                 // Print vm execution trace to the screen.
                 case 'v':
-                    printf("%cVirtual Machine execution:\n", (i > 1 ? '\n' : '\0'));
+                    printf("\nVirtual Machine execution:\n");
                     printFile(VM_OUT);
                     break;
         }

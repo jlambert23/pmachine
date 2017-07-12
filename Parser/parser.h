@@ -13,10 +13,7 @@ enum kind {
 };
 
 // Pre-defined functions.
-int parser(char *inputFile, char *outputFile);
-void error(int err);
-
-/* Top down parsing functions */
+void parser(char *inputFile, char *outputFile);
 void program();
 void block(int level);
 void constDecl();

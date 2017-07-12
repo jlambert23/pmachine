@@ -312,11 +312,11 @@ int virtualMachine(char *inputFile) {
         fprintf(ofp, "%*d\t", 3, reg->pc);
         reg->ir = code[reg->pc];
         reg->pc++;
-
+        
         // Execution Cycle. Sets run to -1 upon failure.
         run = execution_cycle(ofp, stack, reg, &call);
     }
-    
+
     cleanup(code, reg, stack, ofp);
 
     // Program failed to terminate appropriately; notify user.

@@ -6,7 +6,7 @@
 #include <string.h>
 
 // I/O management.
-#define IN      "cases/case2.txt"
+#define IN      	"cases/SampleInput/count.txt"
 #define LEX_OUT     "io/lex_out.txt"
 #define PAR_OUT     "io/par_out.txt"
 #define VM_OUT 		"io/vm_out.txt"
@@ -14,6 +14,7 @@
 // Internal representation.
 #define MAX_CODE_LENGTH 32768
 #define MAX_IDENTIFIER_LENGTH 12
+#define MAX_NUMBER_LENGTH 5
 #define TABLE_SIZE 32
 
 typedef struct {
