@@ -1,0 +1,5 @@
+var x;
+begin
+	while x do
+		x := 3;
+end.

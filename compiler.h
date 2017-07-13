@@ -6,7 +6,7 @@
 #include <string.h>
 
 // I/O management.
-#define IN      	"cases/SampleInput/count.txt"
+#define IN      	"cases/case1.txt"
 #define LEX_OUT     "io/lex_out.txt"
 #define PAR_OUT     "io/par_out.txt"
 #define VM_OUT 		"io/vm_out.txt"

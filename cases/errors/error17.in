@@ -1,0 +1,3 @@
+var x;
+begin
+	while x > 5

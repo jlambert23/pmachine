@@ -132,7 +132,6 @@ void parser(char *inputFile, char *outputFile)
 
 // Errors utilized by parser.c and virtualMachine.c
 void error(int err) {
-    printf("Token: %d\n", token);
     printf ("Error %d: ", err);
 
     switch (err) {
@@ -158,7 +157,7 @@ void error(int err) {
             printf("Expected 'end' after 'begin'.\n");
             break;
         case 8:
-            printf("Incorrect symbol after statement part in block.\n");
+            printf("Variable already exists.\n");
             break;
         case 9:
             printf("Period expected.\n");

@@ -41,13 +41,14 @@ void print_instructions(FILE **ofp, instruction **code, int n) {
     int i;
 
     *ofp = fopen(VM_OUT, "w");
-
+    /*
     fprintf(*ofp, "Line\tOP\tL\tM\n");
 
     for (i = 0; i < n; i++)
         fprintf(*ofp, "%*d\t%s\t%d\t%d\n", 3, i, opcode[code[i]->op - 1], code[i]->l, code[i]->m);
 
     fprintf(*ofp, "\n");
+    */
 }
 
 // Print instructions, registers, and stack during execution to output file.

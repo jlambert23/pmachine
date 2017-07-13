@@ -1,0 +1,7 @@
+var x;
+begin
+	x := 4;
+	if x = 4 then
+	begin
+		x:= 3;
+end.

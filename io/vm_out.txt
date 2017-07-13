@@ -1,13 +1,3 @@
-Line	OP	L	M
-  0	inc	0	2
-  1	lit	0	10
-  2	sto	0	1
-  3	lod	0	1
-  4	lit	0	1
-  5	opr	0	2
-  6	sto	0	0
-  7	sio	0	3
-
 					pc	bp	sp	stack
 Initial values 				0	1	0
   0	inc	0	2		1	1	2	0 0 
