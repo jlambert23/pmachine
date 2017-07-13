@@ -197,12 +197,6 @@ int isValid(char theChar)
 	return isAlphanumeric(theChar) || isSymbol(theChar) || isInvisible(theChar) || theChar == '\0';
 }
 
-// Returns 1 iff [theChar] is a relational character, 0 otherwise.
-int isRelation(int theChar) {
-    return (theChar == eqlsym || theChar == neqsym || theChar == lessym || theChar == leqsym 
-			|| theChar == gtrsym || theChar == geqsym);
-}
-
 //~~~Error state stuff~~~
 
 //If called, this makes a text file called "ef" and places the error message into it.

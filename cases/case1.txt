@@ -1,5 +1,5 @@
 var x, a;
 begin
-	a := 0;
-	x := a
+	a := 10;
+	x := a+1;
 end.

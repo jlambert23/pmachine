@@ -1,8 +1,14 @@
 #include "parser.h"
 
 // Global variables.
-int token, addr = 0, tablePtr = 0, cx = 0;
-char *codePtr, lexeme[MAX_CODE_LENGTH], idName[MAX_IDENTIFIER_LENGTH];
+int token;
+int addr = 0;
+int tablePtr = 0;
+int codeIndex = 0;
+
+char *codePtr;
+char lexeme[MAX_CODE_LENGTH];
+char idName[MAX_IDENTIFIER_LENGTH];
 
 symbol symbol_table[TABLE_SIZE];
 instruction code[MAX_CODE_LENGTH];
@@ -46,7 +52,7 @@ void printCode() {
     FILE *ofp;
     ofp = fopen(PAR_OUT, "w+");
 
-    for (int i = 0; i < cx; i++)
+    for (int i = 0; i < codeIndex; i++)
         fprintf(ofp, "%d %d %d\n", code[i].op, code[i].l, code[i].m);
 
     fclose(ofp);
@@ -70,9 +76,9 @@ void getToken(int start) {
 }
 
 // Return the index if a symbol is found in the table, else return -1.
-int find(char *name) {
+int find() {
     for (int i = 0; i < tablePtr; i++)
-        if (!strcmp(name, symbol_table[i].name))
+        if (!strcmp(idName, symbol_table[i].name))
             return i;
 
     return -1;
@@ -80,12 +86,12 @@ int find(char *name) {
 
 // Generate code for virtual machine.
 void emit(int op, int l, int m) {
-    if (cx > MAX_CODE_LENGTH) error(25);
+    if (codeIndex > MAX_CODE_LENGTH) error(25);
 
-    code[cx].op = op;
-    code[cx].l = l;
-    code[cx].m = m;
-    cx++;
+    code[codeIndex].op = op;
+    code[codeIndex].l = l;
+    code[codeIndex].m = m;
+    codeIndex++;
 }
 
 /*  Insert symbol into symbol_table.
@@ -95,16 +101,16 @@ void emit(int op, int l, int m) {
  *  Variables: store kind, name, L and M.
  *  Procedures: store kind, name, L and M.
  */
-void enter(int kind, char *name, int value, int L, int M) {
+void enter(int kind, int value, int L, int M) {
     // Check if symbol is already in the table.
-    if (find(name) >= 0) return;
+    if (find(idName) >= 0) return;
 
     symbol newsym;
 
     newsym.kind = kind;
     newsym.level = L;
     newsym.addr = M;
-    strcpy(newsym.name, name);
+    strcpy(newsym.name, idName);
 
     // Constant initialization
     if (kind == 1) newsym.val = value;
@@ -119,8 +125,92 @@ void parser(char *inputFile, char *outputFile)
 {
     openFile(inputFile);
     program();
-    printTable();
+    //printTable();
     printCode();
+    printf("No errors. Program is syntatically correct.\n");
+}
+
+// Errors utilized by parser.c and virtualMachine.c
+void error(int err) {
+    printf("Token: %d\n", token);
+    printf ("Error %d: ", err);
+
+    switch (err) {
+        case 1:
+            printf("':=' missing in statement.\n");
+            break;
+        case 2:
+            printf("'=' must be followed by a number.\n");
+            break;
+        case 3:
+            printf("Identifier must be followed by '='.\n");
+            break;
+        case 4:
+            printf("'const', 'var', 'procedure' must be followed by identifier.\n");
+            break;
+        case 5:
+            printf("Semicolon or comma missing.\n");
+            break;
+        case 6:
+            printf("Procedure declaration must end with a semicolon.\n");
+            break;
+        case 7:
+            printf("Expected 'end' after 'begin'.\n");
+            break;
+        case 8:
+            printf("Incorrect symbol after statement part in block.\n");
+            break;
+        case 9:
+            printf("Period expected.\n");
+            break;
+        case 10:
+            printf("Semicolon between statements missing.\n");
+            break;
+        case 11:
+            printf("Undeclared identifier.\n");
+            break;
+        case 12:
+            printf("Assignment to constant or procedure is not allowed.\n");
+            break;
+		case 13:
+			printf("Failed to execute virtual machine.\n");
+			break;
+        case 14:
+            printf("call must be followed by an identifier.\n");
+            break;
+        case 16:
+            printf("Expected 'then' after 'if' condition.\n");
+            break;
+        case 17:
+            printf("Semicolon or '}' expected.\n");
+            break;
+        case 18:
+            printf("Expected 'do' after 'while' condition.\n");
+            break;
+        case 20:
+            printf("Relational operator expected.\n");
+            break;
+        case 21:
+            printf("Identifier, '(', or number expected.\n");
+            break;
+        case 22:
+            printf("Right parenthesis missing.\n");
+            break;
+        case 25:
+            printf("This number is too large.\n");
+            break;
+		case 26:
+			printf("Unable to read parser input file. See 'LEX_OUT' in 'compiler.h'.\n");
+			break;
+		case 27:
+			printf("Unable to read virtual machine input file. See 'PAR_OUT' in 'compiler.h'.\n");
+			break;
+        default:
+            printf("Undefined error.\n");
+            break;
+    }
+    
+    exit(0);
 }
 
 /* ------------------------------------------------*/
@@ -153,6 +243,7 @@ void block(int level) {
         procDecl(level);
     /**/
 
+    emit(INC, 0, addr);
     statement();
 }
 
@@ -169,9 +260,8 @@ void constDecl(int level) {
         if (token != numbersym) error(2);
 
         getToken(0); // value
-
-        // param: constant, ident, value
-        enter(const_type, idName, token, level, addr);
+        
+        enter(const_type, token, level, 0);
         
         getToken(0);
     } while (token == commasym);
@@ -188,8 +278,7 @@ void varDecl(int level) {
 
         getToken(0);
 
-        // param: variable, ident, level
-        enter(var_type, idName, 0, level, addr);
+        enter(var_type, 0, level, addr);
     } while (token == commasym);
 
     if (token != semicolonsym) error(5);
@@ -202,8 +291,7 @@ void procDecl(int level) {
     getToken(0);
     if (token != identsym) error(4);
 
-    // param: procedure, ident
-    enter(proc_type, idName, 0, level, addr);
+    enter(proc_type, 0, level, 0);
 
     getToken(0);
     if (token != semicolonsym) error(6);
@@ -219,18 +307,19 @@ void procDecl(int level) {
 void statement() {
     // Identifier
     if (token == identsym) {
+        int symIndex;
+
         getToken(0);
 
         /* CODE GEN STUFF */
-        int i = find(idName);
-        if (i < 0) error(11);                               // Undeclared identifier
-        if (symbol_table[i].kind != var_type) error(12);    // Assigment to constant or procedure is not allowed.
+        if ((symIndex = find()) < 0) error(11);
+        if (symbol_table[symIndex].kind != var_type) error(12);
 
         if (token != becomesym) error(1);
         
         getToken(0);
         expression();
-        emit(STO, symbol_table[i].level, symbol_table[i].addr);
+        emit(STO, symbol_table[symIndex].level, symbol_table[symIndex].addr);
     }
 
     // Procedure call
@@ -265,23 +354,23 @@ void statement() {
         getToken(0);
 
         /* CODE GEN STUFF */
-        ctemp = cx;
+        ctemp = codeIndex;
         emit(JPC, 0, 0);
         
         statement();
-        code[ctemp].m = cx;
+        code[ctemp].m = codeIndex;
     }
 
     // While
     else if (token == whilesym) {
-        int cx1 = cx;
-        int cx2;
+        int cx1, cx2;
+        cx1 = codeIndex;
 
         getToken(0);
         condition();
         
         /* CODE GEN STUFF */
-        cx2 = cx;
+        cx2 = codeIndex;
         emit(JPC, 0, 0);
 
         if (token != dosym) error(18);
@@ -290,11 +379,13 @@ void statement() {
 
         /* CODE GEN STUFF*/
         emit(JMP, 0, cx1);
-        code[cx2].m = cx;
+        code[cx2].m = codeIndex;
     }
 
     // Read
     else if (token == readsym) {
+        int symIndex;
+
         getToken(0);
 
         // Read identifier.
@@ -302,15 +393,16 @@ void statement() {
         getToken(0);
 
         /* CODE GEN STUFF */
-        int i = find(idName);
-        if (i < 0) error(11);                               // Undeclared identifier
-        if (symbol_table[i].kind != var_type) error(12);    // Assigment to constant or procedure is not allowed.
+        if ((symIndex = find()) < 0) error(11);
+        if (symbol_table[symIndex].kind != var_type) error(12);
 
         emit(SIO, 0, 2);
+        emit(STO, symbol_table[symIndex].level, symbol_table[symIndex].addr);
     }
     
     // Write
     else if (token == writesym) {
+        int symIndex;
         getToken(0);
 
         // Write identifier.
@@ -318,11 +410,10 @@ void statement() {
         getToken(0);
 
         /* CODE GEN STUFF */
-        int i = find(idName);
-        if (i < 0) error(11);                               // Undeclared identifier
-        if (symbol_table[i].kind != var_type) error(12);    // Assigment to constant or procedure is not allowed.
-        printf("%s\n", symbol_table[i].name);
-        emit(LOD, symbol_table[i].level, symbol_table[i].addr);
+        if ((symIndex = find()) < 0) error(11);
+        if (symbol_table[symIndex].kind != var_type) error(12);
+        
+        emit(LOD, symbol_table[symIndex].level, symbol_table[symIndex].addr);
         emit(SIO, 0, 1);
     }
 }
@@ -331,14 +422,38 @@ void condition() {
     if (token == oddsym) {
         getToken(0);
         expression();
+        emit(OPR, 0, ODD);
     }
     else {
         expression();
 
-        if (!isRelation(token)) error(20);
-        getToken(0);
+        int relation = token;
 
+        getToken(0);
         expression();
+
+        switch (relation) {
+            case eqlsym:
+                emit(OPR, 0, EQL);
+                break;
+            case neqsym:
+                emit(OPR, 0, NEQ);
+                break;
+            case lessym:
+                emit(OPR, 0, LSS);
+                break;
+            case leqsym:
+                emit(OPR, 0, LEQ);
+                break;
+            case gtrsym:
+                emit(OPR, 0, GTR);
+                break;
+            case geqsym:
+                emit(OPR, 0, GEQ);
+                break;
+            default:
+                error(20); // Token is not a relation symbol.
+        }
     }
 }
 
@@ -385,16 +500,23 @@ void term() {
 
 void factor() {
     if (token == identsym) {
+        int symIndex;
+
+        getToken(0);
+
         /* CODE GEN STUFF */
-        int i = find(idName);
-        if (i < 0) error(11);                               // Undeclared identifier
-        if (symbol_table[i].kind == var_type)
-            emit(LOD, symbol_table[i].level, symbol_table[i].addr);
-        else if (symbol_table[i].kind == const_type)
-            emit(LIT, 0, symbol_table[i].val);
+        if ((symIndex = find()) < 0) error(11);
+
+        // Load variable to stack.
+        if (symbol_table[symIndex].kind == var_type)
+            emit(LOD, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+
+        // Emit constant to stack
+        else if (symbol_table[symIndex].kind == const_type)
+            emit(LIT, 0, symbol_table[symIndex].val);
         /* END CODE GEN STUFF */
     
-        getToken(0);
+        //getToken(0);
     } 
 
     else if (token == numbersym) {
