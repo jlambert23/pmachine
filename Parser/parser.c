@@ -238,6 +238,7 @@ void block(int level) {
         varDecl(level);
 
     /* Lexical analyzer does not generate procsym. *//*
+
     // Procedure declaration
     while (token == procsym)
         procDecl(level);
@@ -452,7 +453,8 @@ void condition() {
                 emit(OPR, 0, GEQ);
                 break;
             default:
-                error(20); // Token is not a relation symbol.
+                 // Token is not a relation symbol.
+                error(20);
         }
     }
 }
@@ -514,9 +516,6 @@ void factor() {
         // Emit constant to stack
         else if (symbol_table[symIndex].kind == const_type)
             emit(LIT, 0, symbol_table[symIndex].val);
-        /* END CODE GEN STUFF */
-    
-        //getToken(0);
     } 
 
     else if (token == numbersym) {
