@@ -1,2 +1,0 @@
-void openFileCodeGen(char *fileName) {
-}

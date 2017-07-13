@@ -2,14 +2,13 @@
  * COP 3402: Systems Software
  * 5/28/17
  *
- * ------------
- *   pm0vm.c 
- * ------------
+ * --------------------
+ *   virtualMachine.c 
+ * --------------------
  * This program is a VM simulating a stack machine known as P-machine (PM/0).
- * The program takes an input file (given as either an argument or, by default,
- * "vminput.txt") containing instructions under the PM/0 ISA, executes said 
- * instructions, and prints the programs operations in output file in 
- * "vmoutput.txt".*
+ * The program takes an input file  containing instructions under the PM/0 ISA,
+ * executes said instructions, and prints the programs operations 
+ * in output file in "VM_OUT.txt".
  */
 
 #define MAX_STACK_HEIGHT 2000
