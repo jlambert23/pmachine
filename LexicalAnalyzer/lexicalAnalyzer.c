@@ -37,12 +37,13 @@ char IRMapping[35][64] = {
 "?",
 "writesym",
 "readsym",
-"?"
+"procsym",
+"elsesym"
 };
 
 //List of symbols allowed
 char symbols[] = {'+', '-', '*', '/', '(', ')', '=', ',', '.', '<', '>', ';', ':'};
-char reserved[15][32] = {
+char reserved[16][32] = {
 "const",
 "var",
 "?",
@@ -56,13 +57,15 @@ char reserved[15][32] = {
 "do",
 "read",
 "write",
-"odd"
+"odd",
+"procedure",
+"else"
 };
 
 //Returns the index in reserved of the string pointed to by [identifier].
 int reservedIndex(char * identifier)
 {
-	for(int i = 0; i < 14; i++)
+	for(int i = 0; i < 17; i++)
 	{
 		if (strcmp(reserved[i], identifier) == 0)
 		{
@@ -99,6 +102,10 @@ int mapReserved(int spotInReserved)
 		return writesym;
 	if (spotInReserved == 13)
 		return oddsym;
+	if (spotInReserved == 14)
+		return procsym;
+	if (spotInReserved == 15)
+		return elsesym;
 		
     return -1;
 }

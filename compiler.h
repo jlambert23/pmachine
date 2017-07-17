@@ -30,7 +30,7 @@ lessym = 11, leqsym = 12, gtrsym = 13, geqsym = 14, lparentsym = 15,
 rparentsym = 16, commasym = 17, semicolonsym = 18, periodsym = 19, 
 becomesym = 20, beginsym = 21, endsym = 22, ifsym = 23, thensym = 24,
 whilesym = 25, dosym = 26, callsym = 27, constsym = 28, varsym = 29, 
-writesym = 31, readsym = 32, procsym = 33;
+writesym = 30, readsym = 31, procsym = 32, elsesym = 33
 /**/ 
 enum sym {
 	nulsym = 1,
@@ -64,7 +64,8 @@ enum sym {
 	varsym,
 	writesym,
  	readsym,
-	procsym
+	procsym,
+	elsesym
 };
 
 enum opcode {

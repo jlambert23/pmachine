@@ -103,7 +103,7 @@ void emit(int op, int l, int m) {
  */
 void enter(int kind, int value, int L, int M) {
     // Check if symbol is already in the table.
-    if (find(idName) >= 0) return;
+    if (find(idName) >= 0) error(8);
 
     symbol newsym;
 
@@ -157,13 +157,10 @@ void error(int err) {
             printf("Expected 'end' after 'begin'.\n");
             break;
         case 8:
-            printf("Variable already exists.\n");
+            printf("Variable '%s' already exists.\n", idName);
             break;
         case 9:
             printf("Period expected.\n");
-            break;
-        case 10:
-            printf("Semicolon between statements missing.\n");
             break;
         case 11:
             printf("Undeclared identifier.\n");
@@ -179,9 +176,6 @@ void error(int err) {
             break;
         case 16:
             printf("Expected 'then' after 'if' condition.\n");
-            break;
-        case 17:
-            printf("Semicolon or '}' expected.\n");
             break;
         case 18:
             printf("Expected 'do' after 'while' condition.\n");
@@ -236,15 +230,12 @@ void block(int level) {
     if (token == varsym)
         varDecl(level);
 
-    /* Lexical analyzer does not generate procsym. *//*
-
     // Procedure declaration
     while (token == procsym)
         procDecl(level);
-    /**/
 
     emit(INC, 0, addr);
-    statement();
+    statement(level);
 }
 
 // Constant declaration
@@ -291,20 +282,14 @@ void procDecl(int level) {
     getToken(0);
     if (token != identsym) error(4);
 
+    getToken(0);
     enter(proc_type, 0, level, 0);
-
-    getToken(0);
-    if (token != semicolonsym) error(6);
-
-    getToken(0);
-    block(level + 1);
-
-    if (token != semicolonsym) error(17);
-
+    
+    if (token != semicolonsym) error(6);    
     getToken(0);
 }
 
-void statement() {
+void statement(int level) {
     // Identifier
     if (token == identsym) {
         int symIndex;
@@ -324,20 +309,28 @@ void statement() {
 
     // Procedure call
     else if (token == callsym) {
+        int symIndex;
+
         getToken(0);
         if (token != identsym) error (14);
 
+        /* CODE GEN STUFF */
+
         getToken(0);
+        emit(CAL, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+
+        addr = 4;
+        block(level + 1);
     } 
 
     // Begin
     else if (token == beginsym) {
         getToken(0);
-        statement();
+        statement(level);
         
         while (token == semicolonsym) {
             getToken(0);
-            statement();
+            statement(level);
         }
         
         if (token != endsym) error(7);
@@ -357,8 +350,13 @@ void statement() {
         ctemp = codeIndex;
         emit(JPC, 0, 0);
         
-        statement();
+        statement(level);
         code[ctemp].m = codeIndex;
+
+        if (token == elsesym) {
+            getToken(0);
+            statement(level);
+        }
     }
 
     // While
@@ -375,7 +373,7 @@ void statement() {
 
         if (token != dosym) error(18);
         getToken(0);
-        statement();
+        statement(level);
 
         /* CODE GEN STUFF*/
         emit(JMP, 0, cx1);

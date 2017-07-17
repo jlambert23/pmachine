@@ -1,0 +1,8 @@
+var x, a;
+procedure babies;
+begin
+	a := 10;
+	x := a+1;
+
+    call babies;
+end.
