@@ -221,7 +221,10 @@ void program() {
 }
 
 // Program block
-void block(int level) {    
+void block(int level) { 
+    emit(JMP, 0, 0);
+    int tmpIndex = codeIndex - 1;
+
     // Constant declaration
     if (token == constsym)
         constDecl(level);
@@ -233,7 +236,8 @@ void block(int level) {
     // Procedure declaration
     while (token == procsym)
         procDecl(level);
-
+    
+    code[tmpIndex].m = codeIndex;
     emit(INC, 0, addr);
     statement(level);
 }
@@ -283,10 +287,24 @@ void procDecl(int level) {
     if (token != identsym) error(4);
 
     getToken(0);
-    enter(proc_type, 0, level, 0);
+    enter(proc_type, 0, level, addr);
     
     if (token != semicolonsym) error(6);    
     getToken(0);
+
+    // Declare procedure
+    // Store old address and update for system call.
+
+    int tmpAddr = addr;
+    addr = 4;
+    block(level + 1);
+    if (token != semicolonsym) error(6); 
+    
+    // Restore address.
+    addr = tmpAddr;
+    emit(OPR, 0, 0);
+    getToken(0);
+    
 }
 
 void statement(int level) {
@@ -313,14 +331,16 @@ void statement(int level) {
 
         getToken(0);
         if (token != identsym) error (14);
+        getToken(0);
 
         /* CODE GEN STUFF */
 
-        getToken(0);
-        emit(CAL, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+        if ((symIndex = find()) < 0) error(11);
+        if (symbol_table[symIndex].kind != proc_type) error(-1); // proc must follow call
 
-        addr = 4;
-        block(level + 1);
+        //printf("CAL %d %d\n", symbol_table[symIndex].level, symbol_table[symIndex].addr);
+        emit(CAL, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+        //emit (INC, 0, -4);
     } 
 
     // Begin

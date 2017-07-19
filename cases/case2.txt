@@ -1,8 +1,13 @@
 var x, a;
 procedure babies;
+	var y;
+	begin
+		y := 4;
+	end;
+
 begin
 	a := 10;
 	x := a+1;
-
-    call babies;
+	
+	call babies;
 end.
