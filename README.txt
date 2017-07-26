@@ -46,7 +46,7 @@ its current form.
 	----------------------------------------------------------------
 		-f <filename> :	Takes a specified input file. *
 
-		-l			  :	Prints list of lexemes/tokens.
+		-l			  : Prints list of lexemes/tokens.
 
 		-a			  : Prints generated assembly code.
 
