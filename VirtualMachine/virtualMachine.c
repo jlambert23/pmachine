@@ -25,6 +25,8 @@ typedef struct Registers {
 
 /* Function credit: Euripides Montagne */
 // Find base L levels down.
+// mode = 1 for SL
+// mode = 2 for DL
 int base(int *stack, int l, int base, int mode) {
     int bl = base;
     
@@ -55,20 +57,31 @@ void print_instructions(FILE **ofp, instruction **code, int n) {
 void print_execution(FILE *ofp, int *stack, registers *reg, int call) {
     int i, n;
 
-    fprintf(ofp, "%s\t%d\t%d\t\t%d\t%d\t%d\t", opcode[reg->ir->op - 1], reg->ir->l, reg->ir->m, reg->pc, reg->bp, reg->sp);
+    fprintf(ofp, "%s\t%d\t%d\t\t%d\t%d\t%d\t", 
+        opcode[reg->ir->op - 1], reg->ir->l, reg->ir->m, reg->pc, reg->bp, reg->sp);
     
     // Print stack.
     for (i = 1, n = reg->sp; i <= n; i++) {
         fprintf(ofp, "%d ", stack[i]);
 
-        if (reg->bp > n)
+        // Peek at new activation record during CAL instruction.
+        if (reg->ir->op == CAL && reg->bp > n)
             n += 4;
         
-        // Print vertical bars to distinguish activation records.
-        if (reg->bp > 1 && i == base(stack, call - 1, reg->bp, 2) - 1) {
-            fprintf(ofp, "| ");
-            call--;
-        }    
+        if (reg->bp > 1) {
+            int arIndex = base(stack, call - 1, reg->bp, 2);
+
+            // Print vertical bars to distinguish activation records.
+            if (i == arIndex - 1 && i != n) {
+                fprintf(ofp, "| ");
+                call--;
+            }
+            
+            // Leaf case for when a procedure is the first AR of the stack.
+            else if (arIndex == 1)
+                call--;
+        }
+        
     }
         
     fprintf(ofp, "\n");
@@ -194,28 +207,28 @@ int execution_cycle(FILE *ofp, int *stack, registers *reg, int *call) {
 
     switch (reg->ir->op) {
         // LIT
-        case 1:
+        case LIT:
             reg->sp++;
             stack[reg->sp] = reg->ir->m;
             break;
         // OPR
-        case 2:
+        case OPR:
             // Return -1 when invalid instruction is passed to opr().
             if (!opr(stack, reg, call))
                 run = -1;
             break;
         // LOD
-        case 3:
+        case LOD:
             reg->sp++;
             stack[reg->sp] = stack[base(stack, reg->ir->l, reg->bp, 1) + reg->ir->m];
             break;
         // STO
-        case 4:
+        case STO:
             stack[base(stack, reg->ir->l, reg->bp, 1) + reg->ir->m] = stack[reg->sp];
             reg->sp--;
             break;
         // CAL
-        case 5:
+        case CAL:
             (*call)++;
             stack[reg->sp + 1] = 0;                                    // Function Value (FV)
             stack[reg->sp + 2] = base(stack, reg->ir->l, reg->bp, 1);  // Static Link (SL)
@@ -225,22 +238,22 @@ int execution_cycle(FILE *ofp, int *stack, registers *reg, int *call) {
             reg->pc = reg->ir->m;
             break;
         // INC
-        case 6:
+        case INC:
             reg->sp += reg->ir->m;
             break;
         // JMP
-        case 7:
+        case JMP:
             reg->pc = reg->ir->m;
             break;
         // JPC
-        case 8:
+        case JPC:
             if (stack[reg->sp] == 0)
                 reg->pc = reg->ir->m;
 
             reg->sp--;
             break;
         // SIO
-        case 9:
+        case SIO:
             switch(reg->ir->m) {
                 // Print top of stack.
                 case 1:

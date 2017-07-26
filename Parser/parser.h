@@ -13,9 +13,15 @@ enum kind {
 };
 
 // Pre-defined functions.
+char *getName(int index);
+int getKind(int index);
+int getAddr(int index);
+int getLevel(int index);
+int getVal(int index);
+
 void parser(char *inputFile, char *outputFile);
 void program();
-void block(int level);
+void block();
 void constDecl();
 void varDecl();
 void procDecl();

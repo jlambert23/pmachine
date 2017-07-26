@@ -6,7 +6,7 @@
 #include <string.h>
 
 // I/O management.
-#define IN      	"cases/case1.txt"
+#define IN      	"cases/case1.txt"	// Default input file when no -f is present.
 #define LEX_OUT     "io/lex_out.txt"
 #define PAR_OUT     "io/par_out.txt"
 #define VM_OUT 		"io/vm_out.txt"
@@ -70,31 +70,31 @@ enum sym {
 
 enum opcode {
 	LIT = 1,
-	OPR,
-	LOD,
-	STO,
-	CAL,
-	INC,
-	JMP,
-	JPC,
-	SIO
+	OPR = 2,
+	LOD = 3,
+	STO = 4,
+	CAL = 5,
+	INC = 6,
+	JMP = 7,
+	JPC = 8,
+	SIO = 9
 };
 
 enum opr {
-	RET,
-	NEG,
-	ADD,
-	SUB,
-	MUL,
-	DIV,
-	ODD,
-	MOD,
-	EQL,
-	NEQ,
-	LSS,
-	LEQ,
-	GTR,
-	GEQ
+	RET = 0,
+	NEG = 1,
+	ADD = 2,
+	SUB = 3,
+	MUL = 4,
+	DIV = 5,
+	ODD = 6,
+	MOD = 7,
+	EQL = 8,
+	NEQ = 9,
+	LSS = 10,
+	LEQ = 11,
+	GTR = 12,
+	GEQ = 13
 };
 
 void error(int err);

@@ -1,7 +1,20 @@
+/*
+ *  TODO: Unique variables accross activation records:
+ *      - Each independent procedure should have member 
+ *        variables that won't conflict or be accessible.
+ *      - Unique variable names only occur when member is accessible.
+ *      
+ *
+ *  TODO: Implement return values. (Consult recitation notes.)
+ *      - Should a variable accept a return value from a function?
+ *          e.g.: x := call thumbs;
+ */
+
 #include "parser.h"
 
 // Global variables.
 int token;
+int level = 0;
 int addr = 0;
 int tablePtr = 0;
 int codeIndex = 0;
@@ -34,15 +47,15 @@ int openFile(char *inputFile) {
 
 void printTable() {
     for (int i = 0; i < tablePtr; i++) {
-        switch(symbol_table[i].kind) {
+        switch(getKind(i)) {
             case 1:
-                printf("const\t%s\t%d\n", symbol_table[i].name, symbol_table[i].val);
+                printf("const\t%s\tvalue: %d\n", getName(i), getVal(i));
                 break;
             case 2:
-                printf("var\t%s\t\t%d\n", symbol_table[i].name, symbol_table[i].addr);
+                printf("var\t%s\t\taddr: %d\n", getName(i), getAddr(i));
                 break;
             case 3:
-                printf("proc\t%s\t%d\n", symbol_table[i].name, symbol_table[i].level);
+                printf("proc\t%s\taddr: %d\n", getName(i), getAddr(i));
                 break;
         }
     }
@@ -59,26 +72,45 @@ void printCode() {
 }
 
 /* ---------------------------------------*/
+/*               GETTERS                  */
+/* ---------------------------------------*/
+
+char *getName(int index) { return symbol_table[index].name; }
+int getKind(int index) { return symbol_table[index].kind; }
+int getAddr(int index) { return symbol_table[index].addr; }
+int getLevel(int index) { return symbol_table[index].level; }
+int getVal(int index) { return symbol_table[index].val; }
+
+/* ---------------------------------------*/
 /*           PARSER / CODE GEN            */
 /* ---------------------------------------*/
 
+/* Program starts here. Function is called by compiler.c */
+void parser(char *inputFile, char *outputFile)
+{
+    openFile(inputFile);
+    program();
+    printCode();
+    printf("No errors. Program is syntatically correct.\n");
+}
+
 // Get next token in file. Skips identifiers and stores them into codePtr.
-void getToken(int start) {
-    codePtr = (start == 1 ? strtok(lexeme, " ") : strtok(NULL, " "));
+void getToken() {
+    codePtr = (!codePtr ? strtok(lexeme, " ") : strtok(NULL, " "));
     if (!codePtr) return; // EOF
 
     if (!isDigit(*codePtr)) {
         strcpy(idName, codePtr);
-        getToken(0);
+        getToken();
     }
         
     token = atoi(codePtr);
 }
 
 // Return the index if a symbol is found in the table, else return -1.
-int find() {
+int findId() {
     for (int i = 0; i < tablePtr; i++)
-        if (!strcmp(idName, symbol_table[i].name))
+        if (!strcmp(idName, getName(i)))
             return i;
 
     return -1;
@@ -103,7 +135,7 @@ void emit(int op, int l, int m) {
  */
 void enter(int kind, int value, int L, int M) {
     // Check if symbol is already in the table.
-    if (find(idName) >= 0) error(8);
+    if (findId() >= 0) error(8);
 
     symbol newsym;
 
@@ -114,20 +146,10 @@ void enter(int kind, int value, int L, int M) {
 
     // Constant initialization
     if (kind == 1) newsym.val = value;
-    else addr++;
+    if (kind == 2) addr++;
 
     symbol_table[tablePtr] = newsym;
     tablePtr++;
-}
-
-/* Program starts here. Function is called by compiler.c */
-void parser(char *inputFile, char *outputFile)
-{
-    openFile(inputFile);
-    program();
-    //printTable();
-    printCode();
-    printf("No errors. Program is syntatically correct.\n");
 }
 
 // Errors utilized by parser.c and virtualMachine.c
@@ -161,6 +183,9 @@ void error(int err) {
             break;
         case 9:
             printf("Period expected.\n");
+            break;
+        case 10:
+            printf("Call must be followed by a procedure identifier\n");
             break;
         case 11:
             printf("Undeclared identifier.\n");
@@ -211,234 +236,244 @@ void error(int err) {
 /* ------------------------------------------------*/
 
 void program() {
-    getToken(1);
-    int level = 0;
+    getToken();
 
-    block(level);    
+    block();
     if (token != periodsym) error(9);
 
     emit(SIO, 0, 3);
 }
 
 // Program block
-void block(int level) { 
+void block() { 
+    int tmpIndex = codeIndex;
+    level++;
+
     emit(JMP, 0, 0);
-    int tmpIndex = codeIndex - 1;
 
     // Constant declaration
     if (token == constsym)
-        constDecl(level);
+        constDecl();
         
     // Variable declaration
     if (token == varsym)
-        varDecl(level);
+        varDecl();
 
     // Procedure declaration
     while (token == procsym)
-        procDecl(level);
+        procDecl();
     
-    code[tmpIndex].m = codeIndex;
+    // If codeIndex has not moved, increment to avoid infinite loop.
+    code[tmpIndex].m = codeIndex == tmpIndex ? codeIndex + 1 : codeIndex;
+
     emit(INC, 0, addr);
-    statement(level);
+
+    statement();
+    level--;
 }
 
 // Constant declaration
-void constDecl(int level) {
+void constDecl() {
     do {
-        getToken(0);
+        getToken();
         if (token != identsym) error(4);
 
-        getToken(0);
+        getToken();
         if (token != eqlsym) error(3);
 
-        getToken(0);
+        getToken();
         if (token != numbersym) error(2);
 
-        getToken(0); // value
+        getToken(); // value
         
         enter(const_type, token, level, 0);
         
-        getToken(0);
+        getToken();
     } while (token == commasym);
 
     if (token != semicolonsym) error(5);
-    getToken(0);
+    getToken();
 }
 
 // Variable declaration
-void varDecl(int level) {
+void varDecl() {
     do {
-        getToken(0);
+        getToken();
         if (token != identsym) error(4);
 
-        getToken(0);
+        getToken();
 
         enter(var_type, 0, level, addr);
     } while (token == commasym);
 
     if (token != semicolonsym) error(5);
 
-    getToken(0);
+    getToken();
 }
 
 // Procedure declaration
-void procDecl(int level) {
-    getToken(0);
+void procDecl() {
+    getToken();
     if (token != identsym) error(4);
 
-    getToken(0);
-    enter(proc_type, 0, level, addr);
+    getToken();
+
+    enter(proc_type, 0, level, codeIndex);
     
     if (token != semicolonsym) error(6);    
-    getToken(0);
+    getToken();
 
-    // Declare procedure
-    // Store old address and update for system call.
-
+    // Define procedure and emit member instructions.
     int tmpAddr = addr;
     addr = 4;
-    block(level + 1);
-    if (token != semicolonsym) error(6); 
+    block();
+
+    if (token != semicolonsym) error(6);
     
-    // Restore address.
+    // Return from call.
     addr = tmpAddr;
     emit(OPR, 0, 0);
-    getToken(0);
+
+    getToken();
     
 }
 
-void statement(int level) {
+void statement() {
     // Identifier
     if (token == identsym) {
         int symIndex;
 
-        getToken(0);
+        getToken();
 
-        /* CODE GEN STUFF */
-        if ((symIndex = find()) < 0) error(11);
-        if (symbol_table[symIndex].kind != var_type) error(12);
+        // Search for identifier in symbol table.
+        if ((symIndex = findId()) < 0) error(11);
+        if (getKind(symIndex) != var_type) error(12);
 
         if (token != becomesym) error(1);
         
-        getToken(0);
+        getToken();
         expression();
-        emit(STO, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+        emit(STO, 0, getAddr(symIndex));
     }
 
-    // Procedure call
+    // Call
     else if (token == callsym) {
         int symIndex;
 
-        getToken(0);
+        getToken();
         if (token != identsym) error (14);
-        getToken(0);
+        getToken();
 
-        /* CODE GEN STUFF */
+        // Search for identifier in symbol table.
+        if ((symIndex = findId()) < 0) error(11);
+        if (getKind(symIndex) != proc_type) error(10);
 
-        if ((symIndex = find()) < 0) error(11);
-        if (symbol_table[symIndex].kind != proc_type) error(-1); // proc must follow call
-
-        //printf("CAL %d %d\n", symbol_table[symIndex].level, symbol_table[symIndex].addr);
-        emit(CAL, symbol_table[symIndex].level, symbol_table[symIndex].addr);
-        //emit (INC, 0, -4);
+        emit(CAL, getLevel(symIndex), getAddr(symIndex));
     } 
 
     // Begin
     else if (token == beginsym) {
-        getToken(0);
-        statement(level);
+        getToken();
+        statement();
         
         while (token == semicolonsym) {
-            getToken(0);
-            statement(level);
+            getToken();
+            statement();
         }
         
         if (token != endsym) error(7);
-        getToken(0);
+        getToken();
     }
 
     // If
     else if (token == ifsym) {
-        int ctemp;
+        int skip_if, skip_else;
 
-        getToken(0);
+        getToken();
         condition();
-        if (token != thensym) error(16);
-        getToken(0);
 
-        /* CODE GEN STUFF */
-        ctemp = codeIndex;
+        if (token != thensym) error(16);
+        getToken();
+
+        // Save address of JPC.
+        skip_if = codeIndex;
         emit(JPC, 0, 0);
         
-        statement(level);
-        code[ctemp].m = codeIndex;
+        statement();
 
+        // Save address of JMP.
+        skip_else = codeIndex;
+        emit(JMP, 0, 0);
+
+        // Update JPC address to skip if statement.
+        code[skip_if].m = codeIndex;
+
+        getToken();
+
+        // Else
         if (token == elsesym) {
-            getToken(0);
-            statement(level);
+            getToken();
+            statement();
         }
+
+        // Update JMP address to skip else statement.
+        code[skip_else].m = codeIndex;
     }
 
     // While
     else if (token == whilesym) {
-        int cx1, cx2;
-        cx1 = codeIndex;
+        int loop_while, exit_while;
 
-        getToken(0);
+        // Save address of beginning of while.
+        loop_while = codeIndex;
+
+        getToken();
         condition();
         
-        /* CODE GEN STUFF */
-        cx2 = codeIndex;
+        // Save address of JPC.
+        exit_while = codeIndex;
         emit(JPC, 0, 0);
 
         if (token != dosym) error(18);
-        getToken(0);
-        statement(level);
 
-        /* CODE GEN STUFF*/
-        emit(JMP, 0, cx1);
-        code[cx2].m = codeIndex;
+        getToken();
+        statement();
+
+        // Loop to beginning of while.
+        emit(JMP, 0, loop_while);
+
+        // Update JPC address to exit while loop.
+        code[exit_while].m = codeIndex;
     }
 
     // Read
     else if (token == readsym) {
         int symIndex;
 
-        getToken(0);
+        getToken();
 
-        // Read identifier.
         if (token != identsym) error(4);
-        getToken(0);
+        getToken();
 
-        /* CODE GEN STUFF */
-        if ((symIndex = find()) < 0) error(11);
-        if (symbol_table[symIndex].kind != var_type) error(12);
+        // Search for identifier in symbol table.
+        if ((symIndex = findId()) < 0) error(11);
+        if (getKind(symIndex) != var_type) error(12);
 
         emit(SIO, 0, 2);
-        emit(STO, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+        emit(STO, 0, getAddr(symIndex));
     }
     
     // Write
     else if (token == writesym) {
-        int symIndex;
-        getToken(0);
-
-        // Write identifier.
-        if (token != identsym) error(4);
-        getToken(0);
-
-        /* CODE GEN STUFF */
-        if ((symIndex = find()) < 0) error(11);
-        if (symbol_table[symIndex].kind != var_type) error(12);
-        
-        emit(LOD, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+        getToken();
+        expression();
         emit(SIO, 0, 1);
     }
 }
 
 void condition() {
     if (token == oddsym) {
-        getToken(0);
+        getToken();
         expression();
         emit(OPR, 0, ODD);
     }
@@ -447,7 +482,7 @@ void condition() {
 
         int relation = token;
 
-        getToken(0);
+        getToken();
         expression();
 
         switch (relation) {
@@ -470,7 +505,6 @@ void condition() {
                 emit(OPR, 0, GEQ);
                 break;
             default:
-                 // Token is not a relation symbol.
                 error(20);
         }
     }
@@ -479,19 +513,17 @@ void condition() {
 void expression() {
     int addop = token;
 
-    if (token == plussym || token == minussym) getToken(0);
+    if (token == plussym || token == minussym) getToken();
     term();
 
-    /* CODE GEN STUFF */
     if (addop == minussym)
         emit(OPR, 0, NEG);
 
     while (token == plussym || token == minussym) {
         addop = token;
-        getToken(0);
+        getToken();
         term();
 
-        /* CODE GEN STUFF */
         if (addop == plussym)
             emit(OPR, 0, ADD);
         else
@@ -500,16 +532,14 @@ void expression() {
 }
 
 void term() {
-    int mulop;
-    
+    int mulop;    
     factor();
 
     while (token == multsym || token == slashsym) {
         mulop = token;
-        getToken(0);
+        getToken();
         factor();
 
-        /* CODE GEN STUFF */
         if (mulop == multsym)
             emit(OPR, 0, MUL);
         else
@@ -520,33 +550,33 @@ void term() {
 void factor() {
     if (token == identsym) {
         int symIndex;
+        getToken();
 
-        getToken(0);
-
-        /* CODE GEN STUFF */
-        if ((symIndex = find()) < 0) error(11);
+        // Search for identifier in symbol table.
+        if ((symIndex = findId()) < 0) error(11);
 
         // Load variable to stack.
-        if (symbol_table[symIndex].kind == var_type)
-            emit(LOD, symbol_table[symIndex].level, symbol_table[symIndex].addr);
+        if (getKind(symIndex) == var_type)
+            emit(LOD, 0, getAddr(symIndex));
 
-        // Emit constant to stack
-        else if (symbol_table[symIndex].kind == const_type)
-            emit(LIT, 0, symbol_table[symIndex].val);
+        // Emit constant to stack.
+        else if (getKind(symIndex) == const_type)
+            emit(LIT, 0, getVal(symIndex));
     } 
 
+    // Emit number to stack.
     else if (token == numbersym) {
-        getToken(0);
+        getToken();
         emit(LIT, 0, token);
-        getToken(0);
+        getToken();
     }
 
     else if (token == lparentsym) {
-        getToken(0);
+        getToken();
         expression();
 
         if (token != rparentsym) error(22);
-        getToken(0);
+        getToken();
     }
 
     else error(21);

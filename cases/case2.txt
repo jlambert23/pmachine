@@ -1,13 +1,23 @@
-var x, a;
-procedure babies;
+var x;
+procedure thumbs;
+	procedure forks;
 	var y;
+		begin
+			y := 17;
+		end;
+		
 	begin
-		y := 4;
+		call forks;
 	end;
-
-begin
-	a := 10;
-	x := a+1;
 	
-	call babies;
+begin
+	read x;
+
+	if x = 3 then
+		call thumbs;
+	else
+		write x + 23;
+
+	if x = 3 then
+		write -1;
 end.
