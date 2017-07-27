@@ -14,8 +14,8 @@
 
 // Global variables.
 int token;
+int addr;
 int level = 0;
-int addr = 0;
 int tablePtr = 0;
 int codeIndex = 0;
 
@@ -91,7 +91,6 @@ void parser(char *inputFile, char *outputFile)
     openFile(inputFile);
     program();
     printCode();
-    printTable();
     printf("No errors. Program is syntatically correct.\n");
 }
 
@@ -248,6 +247,8 @@ void program() {
 // Program block
 void block() { 
     int tmpIndex = codeIndex;
+    addr = level == 0 ? 0 : 4;
+
     level++;
     emit(JMP, 0, 0);
 
@@ -324,15 +325,14 @@ void procDecl() {
     getToken();
 
     // Define procedure and emit member instructions.
-    int tmpAddr = addr, tmp_tablePtr = tablePtr;
-    addr = 4;
+    int tmpAddr = addr, tmpTablePtr = tablePtr;
     block();
 
     if (token != semicolonsym) error(6);
     
     // Return from call.
     addr = tmpAddr;
-    tablePtr = tmp_tablePtr;
+    tablePtr = tmpTablePtr;
     emit(OPR, 0, 0);
 
     getToken();
