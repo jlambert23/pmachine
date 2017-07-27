@@ -185,7 +185,7 @@ void error(int err) {
             printf("Period expected.\n");
             break;
         case 10:
-            printf("Call must be followed by a procedure identifier\n");
+            printf("Call must be followed by a procedure identifier.\n");
             break;
         case 11:
             printf("Undeclared identifier.\n");
@@ -300,8 +300,8 @@ void constDecl() {
 void varDecl() {
     do {
         getToken();
+        
         if (token != identsym) error(4);
-
         getToken();
 
         enter(var_type, 0, addr);

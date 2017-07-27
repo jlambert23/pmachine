@@ -1,5 +1,13 @@
-var x, a;
+const target = 5;
+var i;
+procedure adder; 
+	if i <> target then
+	begin
+		i := i + 1;
+		call adder;
+	end;
+
 begin
-	a := 10;
-	x := a+1;
+	call adder;
+	write i;
 end.
