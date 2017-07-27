@@ -52,10 +52,10 @@ void printTable() {
                 printf("const\t%s\tvalue: %d\n", getName(i), getVal(i));
                 break;
             case 2:
-                printf("var\t%s\t\taddr: %d\n", getName(i), getAddr(i));
+                printf("var\t%s\t\taddr: %d\tlevel: %d\n", getName(i), getAddr(i), getLevel(i));
                 break;
             case 3:
-                printf("proc\t%s\taddr: %d\n", getName(i), getAddr(i));
+                printf("proc\t%s\t\taddr: %d\tlevel: %d\n", getName(i), getAddr(i), getLevel(i));
                 break;
         }
     }
@@ -91,6 +91,7 @@ void parser(char *inputFile, char *outputFile)
     openFile(inputFile);
     program();
     printCode();
+    printTable();
     printf("No errors. Program is syntatically correct.\n");
 }
 
@@ -133,14 +134,14 @@ void emit(int op, int l, int m) {
  *  Variables: store kind, name, L and M.
  *  Procedures: store kind, name, L and M.
  */
-void enter(int kind, int value, int L, int M) {
+void enter(int kind, int value, int M) {
     // Check if symbol is already in the table.
     if (findId() >= 0) error(8);
 
     symbol newsym;
 
     newsym.kind = kind;
-    newsym.level = L;
+    newsym.level = level;
     newsym.addr = M;
     strcpy(newsym.name, idName);
 
@@ -197,7 +198,7 @@ void error(int err) {
 			printf("Failed to execute virtual machine.\n");
 			break;
         case 14:
-            printf("call must be followed by an identifier.\n");
+            printf("Call must be followed by an identifier.\n");
             break;
         case 16:
             printf("Expected 'then' after 'if' condition.\n");
@@ -248,7 +249,6 @@ void program() {
 void block() { 
     int tmpIndex = codeIndex;
     level++;
-
     emit(JMP, 0, 0);
 
     // Constant declaration
@@ -286,7 +286,7 @@ void constDecl() {
 
         getToken(); // value
         
-        enter(const_type, token, level, 0);
+        enter(const_type, token, 0);
         
         getToken();
     } while (token == commasym);
@@ -303,7 +303,7 @@ void varDecl() {
 
         getToken();
 
-        enter(var_type, 0, level, addr);
+        enter(var_type, 0, addr);
     } while (token == commasym);
 
     if (token != semicolonsym) error(5);
@@ -318,13 +318,13 @@ void procDecl() {
 
     getToken();
 
-    enter(proc_type, 0, level, codeIndex);
+    enter(proc_type, 0, codeIndex);
     
     if (token != semicolonsym) error(6);    
     getToken();
 
     // Define procedure and emit member instructions.
-    int tmpAddr = addr;
+    int tmpAddr = addr, tmp_tablePtr = tablePtr;
     addr = 4;
     block();
 
@@ -332,6 +332,7 @@ void procDecl() {
     
     // Return from call.
     addr = tmpAddr;
+    tablePtr = tmp_tablePtr;
     emit(OPR, 0, 0);
 
     getToken();
@@ -353,7 +354,7 @@ void statement() {
         
         getToken();
         expression();
-        emit(STO, 0, getAddr(symIndex));
+        emit(STO, level - getLevel(symIndex), getAddr(symIndex));
     }
 
     // Call
@@ -368,7 +369,10 @@ void statement() {
         if ((symIndex = findId()) < 0) error(11);
         if (getKind(symIndex) != proc_type) error(10);
 
-        emit(CAL, getLevel(symIndex), getAddr(symIndex));
+        int l = level - getLevel(symIndex);
+        if (l < 0)  error(11);
+
+        emit(CAL, level - getLevel(symIndex), getAddr(symIndex));
     } 
 
     // Begin
@@ -408,8 +412,7 @@ void statement() {
         // Update JPC address to skip if statement.
         code[skip_if].m = codeIndex;
 
-        getToken();
-
+        
         // Else
         if (token == elsesym) {
             getToken();
@@ -460,7 +463,7 @@ void statement() {
         if (getKind(symIndex) != var_type) error(12);
 
         emit(SIO, 0, 2);
-        emit(STO, 0, getAddr(symIndex));
+        emit(STO, level - getLevel(symIndex), getAddr(symIndex));
     }
     
     // Write
@@ -557,7 +560,7 @@ void factor() {
 
         // Load variable to stack.
         if (getKind(symIndex) == var_type)
-            emit(LOD, 0, getAddr(symIndex));
+            emit(LOD, level - getLevel(symIndex), getAddr(symIndex));
 
         // Emit constant to stack.
         else if (getKind(symIndex) == const_type)

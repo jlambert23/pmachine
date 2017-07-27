@@ -230,10 +230,10 @@ int execution_cycle(FILE *ofp, int *stack, registers *reg, int *call) {
         // CAL
         case CAL:
             (*call)++;
-            stack[reg->sp + 1] = 0;                                    // Function Value (FV)
-            stack[reg->sp + 2] = base(stack, reg->ir->l, reg->bp, 1);  // Static Link (SL)
-            stack[reg->sp + 3] = reg->bp;                              // Dynamic Link (DL)
-            stack[reg->sp + 4] = reg->pc;                              // Return Address (RA)
+            stack[reg->sp + 1] = 0;                                     // Function Value (FV)
+            stack[reg->sp + 2] = base(stack, reg->ir->l, reg->bp, 1);   // Static Link (SL)
+            stack[reg->sp + 3] = reg->bp;                               // Dynamic Link (DL)
+            stack[reg->sp + 4] = reg->pc;                               // Return Address (RA)
             reg->bp = reg->sp + 1;
             reg->pc = reg->ir->m;
             break;

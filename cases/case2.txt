@@ -1,23 +1,15 @@
-var x;
-procedure thumbs;
-	procedure forks;
-	var y;
-		begin
-			y := 17;
-		end;
-		
+procedure A;
+	var x;
 	begin
-		call forks;
+		x := 3;
+	end;
+
+procedure B;
+	var x;
+	begin
+		call A;
 	end;
 	
 begin
-	read x;
-
-	if x = 3 then
-		call thumbs;
-	else
-		write x + 23;
-
-	if x = 3 then
-		write -1;
+	call B;
 end.
